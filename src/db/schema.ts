@@ -55,7 +55,7 @@ export const blogs = pgTable('blogs', {
 
     // blog-level settings
 
-    isPublic: boolean('is_public').default(true),
+    isPublic: boolean('is_public').default(true).notNull(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -63,7 +63,7 @@ export const blogs = pgTable('blogs', {
 
 }, (table)=> {
     return{
-        userSlugUnique: uniqueIndex('user_slug_unique'),
+        userSlugUnique: uniqueIndex('user_slug_unique').on(table.userId, table.slug),
         userIdIdx: index('blog_user_id_idx').on(table.userId)
     }
 })
@@ -76,16 +76,16 @@ export const posts = pgTable('posts', {
     blogId: uuid('blog_id').references(()=> blogs.id, {onDelete: 'cascade'}).notNull(),
     authorId: uuid('author_id').references(()=> users.id, {onDelete: 'cascade'}).notNull(),
 
-    title: varchar('tilte', {length: 255}).notNull(),
+    title: varchar('title', {length: 255}).notNull(),
     slug: varchar('slug', {length: 255}).notNull(),
     content: text('content'),
     excerpt: varchar('excerpt', {length: 500}),
 
-    status: postStatusEnum('status').default('draft'),
+    status: postStatusEnum('status').default('draft').notNull(),
 
 
     featuredImage: varchar('featured_image', {length: 500}),
-    viewCount: integer('view_count').default(0),
+    viewCount: integer('view_count').default(0).notNull(),
     readingTime: integer('reading_time'), 
 
     publishedAt: timestamp('published_at'),
@@ -95,10 +95,11 @@ export const posts = pgTable('posts', {
 }, (table) =>{
     return{
         searchIdx: index('posts_search_idx').using('gin', 
-            sql `to_tsvector('english', ${table.title} || ' ' || ${table.content})`
+            sql `to_tsvector('english', ${table.title} || ' ' || coalesce(${table.content}, ''))`
         ),
         blogSlugUnique: uniqueIndex('blog_slug_unique').on(table.blogId, table.slug),
-        authorIdIdx: index('posts_blog_id_idx').on(table.blogId),
+        blogIdIdx: index('posts_blog_id_idx').on(table.blogId),
+        authorIdIdx: index('posts_author_id_idx').on(table.authorId),
         statusIdx: index('posts_status_idx').on(table.status), 
     }
 })
@@ -132,7 +133,7 @@ export const refreshTokens = pgTable('refresh_tokens', {
   token: varchar('token', { length: 500 }).notNull().unique(),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  revoked: boolean('revoked').default(false),
+  revoked: boolean('revoked').default(false).notNull(),
 }, (table) => {
   return {
     userIdIdx: index('refresh_tokens_user_id_idx').on(table.userId),
@@ -181,7 +182,6 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
     references: [tags.id],
   }),
 }));
-
 
 
 

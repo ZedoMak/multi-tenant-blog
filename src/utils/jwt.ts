@@ -22,7 +22,7 @@ export function generateRefreshToken(userId: string):string {
     return uuidv4() + '-' + uuidv4()
 }
 
-export function verifyAcessToken(token: string):TokenPayload {
+export function verifyAccessToken(token: string):TokenPayload {
     return jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as TokenPayload
 }
 
